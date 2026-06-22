@@ -1,0 +1,1 @@
+# -mahjong-first-discard
