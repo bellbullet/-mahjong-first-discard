@@ -1,4 +1,4 @@
-const questions = [
+const originalQuestions = [
   {
     difficulty: "初級",
     hand: ["1m","2m","3m","4m","5m","6m","2p","3p","4p","3s","4s","7s","9s","E"],
@@ -77,6 +77,24 @@ const suitNames = { m: "萬", p: "筒", s: "索" };
 const honorNames = { E: "東", S: "南", W: "西", N: "北", P: "白", F: "發", C: "中" };
 const honorLabels = { E: "東", S: "南", W: "西", N: "北", P: "白", F: "發", C: "中" };
 
+function shuffle(items) {
+  const pool = [...items];
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool;
+}
+
+function pickQuestions() {
+  const mix = { 初級: 3, 中級: 3, 上級: 4 };
+  const selected = Object.entries(mix).flatMap(([difficulty, count]) =>
+    shuffle(window.QUESTION_BANK.filter((question) => question.difficulty === difficulty)).slice(0, count)
+  );
+  return shuffle(selected);
+}
+
+let questions = pickQuestions();
 let current = 0;
 let answers = Array(questions.length).fill(null);
 
@@ -179,6 +197,7 @@ prevButton.addEventListener("click", () => {
 });
 
 document.querySelector("#retry-button").addEventListener("click", () => {
+  questions = pickQuestions();
   current = 0;
   answers = Array(questions.length).fill(null);
   document.querySelector("#result").hidden = true;
@@ -187,4 +206,5 @@ document.querySelector("#retry-button").addEventListener("click", () => {
 });
 
 document.querySelector("#question-count").textContent = questions.length;
+document.querySelector("#score-total").textContent = `/ ${questions.length}`;
 renderQuestion();

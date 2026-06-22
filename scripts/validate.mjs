@@ -1,18 +1,17 @@
 import fs from "node:fs";
 import vm from "node:vm";
 
-const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
-const block = source
-  .slice(source.indexOf("const questions"), source.indexOf("const suitNames"))
-  .replace("const questions", "questions");
-const context = {};
+const source = fs.readFileSync(new URL("../questions.generated.js", import.meta.url), "utf8");
+const context = { window: {} };
 vm.createContext(context);
-vm.runInContext(block, context);
+vm.runInContext(source, context);
+const questions = context.window.QUESTION_BANK;
 
 const codes = [
   ...["m", "p", "s"].flatMap((suit) => Array.from({ length: 9 }, (_, i) => `${i + 1}${suit}`)),
   "E", "S", "W", "N", "P", "F", "C"
 ];
+const terminals = new Set([0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33]);
 
 function standardShanten(tiles) {
   const counts = codes.map((code) => tiles.filter((tile) => tile === code).length);
@@ -53,8 +52,18 @@ function standardShanten(tiles) {
   return best;
 }
 
+function shanten(tiles) {
+  const counts = codes.map((code) => tiles.filter((tile) => tile === code).length);
+  const unique = counts.filter(Boolean).length;
+  const pairs = counts.filter((count) => count >= 2).length;
+  const sevenPairs = 6 - pairs + Math.max(0, 7 - unique);
+  const orphanUnique = counts.reduce((sum, count, i) => sum + (count && terminals.has(i) ? 1 : 0), 0);
+  const orphanPair = counts.some((count, i) => count >= 2 && terminals.has(i)) ? 1 : 0;
+  return Math.min(standardShanten(tiles), sevenPairs, 13 - orphanUnique - orphanPair);
+}
+
 let failed = false;
-context.questions.forEach((question, index) => {
+questions.forEach((question, index) => {
   const counts = Object.groupBy(question.hand, (tile) => tile);
   const structuralErrors = [
     question.hand.length !== 14 && `expected 14 tiles, got ${question.hand.length}`,
@@ -65,10 +74,10 @@ context.questions.forEach((question, index) => {
   const choices = [...new Set(question.hand)].map((discard) => {
     const hand = [...question.hand];
     hand.splice(hand.indexOf(discard), 1);
-    const shanten = standardShanten(hand);
-    const waits = codes.filter((draw) => hand.filter((tile) => tile === draw).length < 4 && standardShanten([...hand, draw]) < shanten);
+    const handShanten = shanten(hand);
+    const waits = codes.filter((draw) => hand.filter((tile) => tile === draw).length < 4 && shanten([...hand, draw]) < handShanten);
     const acceptance = waits.reduce((sum, draw) => sum + 4 - hand.filter((tile) => tile === draw).length, 0);
-    return { discard, shanten, acceptance, waits };
+    return { discard, shanten: handShanten, acceptance, waits };
   }).sort((a, b) => a.shanten - b.shanten || b.acceptance - a.acceptance);
   const answerStats = choices.filter((choice) => question.answers.includes(choice.discard));
   const immediateBest = choices[0];

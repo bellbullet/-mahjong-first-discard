@@ -31,7 +31,7 @@
         <p class="lead">門前手の第一打だけを切り取った、牌効率トレーニング。<br />受け入れと、その先の変化を読む。</p>
         <a class="start-button" href="#drill">問題をはじめる <span>↓</span></a>
         <div class="hero-stats" aria-label="ドリル概要">
-          <div><strong id="question-count">12</strong><span>QUESTIONS</span></div>
+          <div><strong id="question-count">10</strong><span>RANDOM / 100</span></div>
           <div><strong>3</strong><span>LEVELS</span></div>
           <div><strong>∞</strong><span>RETRY</span></div>
         </div>
@@ -58,7 +58,7 @@
             <h2>何を切る？</h2>
           </div>
           <div class="progress-wrap">
-            <span id="progress-label">01 / 12</span>
+            <span id="progress-label">01 / 10</span>
             <div class="progress-track"><div id="progress-bar"></div></div>
           </div>
         </div>
@@ -91,7 +91,7 @@
       <section class="result" id="result" hidden>
         <p class="eyebrow">RESULT</p>
         <h2>牌効率の輪郭が、<br />少し見えてきた。</h2>
-        <div class="score"><strong id="score">0</strong><span>/ 12</span></div>
+        <div class="score"><strong id="score">0</strong><span id="score-total">/ 10</span></div>
         <p id="score-message"></p>
         <button id="retry-button" class="start-button" type="button">もう一度挑戦 <span>↻</span></button>
       </section>
@@ -101,6 +101,7 @@
       <a class="brand" href="#top"><span class="brand-mark">一</span><span>一打目</span></a>
       <p>STANDARD TILE EFFICIENCY · FIRST DISCARD ONLY</p>
     </footer>
+    <script src="questions.generated.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
