@@ -13,7 +13,7 @@ const codes = [
 ];
 const terminals = new Set([0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33]);
 
-function standardShanten(tiles) {
+function standardShanten(tiles, fixedMelds = 0) {
   const counts = codes.map((code) => tiles.filter((tile) => tile === code).length);
   let best = 8;
   function walk(start, melds, pairs, shapes) {
@@ -48,25 +48,29 @@ function standardShanten(tiles) {
       counts[start] += 1; counts[start + 2] += 1;
     }
   }
-  walk(0, 0, 0, 0);
+  walk(0, fixedMelds, 0, 0);
   return best;
 }
 
-function shanten(tiles) {
+function shanten(tiles, fixedMelds = 0) {
   const counts = codes.map((code) => tiles.filter((tile) => tile === code).length);
   const unique = counts.filter(Boolean).length;
   const pairs = counts.filter((count) => count >= 2).length;
   const sevenPairs = 6 - pairs + Math.max(0, 7 - unique);
   const orphanUnique = counts.reduce((sum, count, i) => sum + (count && terminals.has(i) ? 1 : 0), 0);
   const orphanPair = counts.some((count, i) => count >= 2 && terminals.has(i)) ? 1 : 0;
+  if (fixedMelds) return standardShanten(tiles, fixedMelds);
   return Math.min(standardShanten(tiles), sevenPairs, 13 - orphanUnique - orphanPair);
 }
 
 let failed = false;
 questions.forEach((question, index) => {
-  const counts = Object.groupBy(question.hand, (tile) => tile);
+  const allTiles = [...question.hand, ...question.openMelds.flat()];
+  const counts = Object.groupBy(allTiles, (tile) => tile);
+  const expectedConcealed = 14 - question.openMelds.length * 3;
   const structuralErrors = [
-    question.hand.length !== 14 && `expected 14 tiles, got ${question.hand.length}`,
+    question.hand.length !== expectedConcealed && `expected ${expectedConcealed} concealed tiles, got ${question.hand.length}`,
+    allTiles.length !== 14 && `expected 14 total tiles, got ${allTiles.length}`,
     ...Object.entries(counts).filter(([, tiles]) => tiles.length > 4).map(([tile]) => `${tile} appears more than four times`),
     ...question.answers.filter((tile) => !question.hand.includes(tile)).map((tile) => `answer ${tile} is not in hand`)
   ].filter(Boolean);
@@ -74,9 +78,9 @@ questions.forEach((question, index) => {
   const choices = [...new Set(question.hand)].map((discard) => {
     const hand = [...question.hand];
     hand.splice(hand.indexOf(discard), 1);
-    const handShanten = shanten(hand);
-    const waits = codes.filter((draw) => hand.filter((tile) => tile === draw).length < 4 && shanten([...hand, draw]) < handShanten);
-    const acceptance = waits.reduce((sum, draw) => sum + 4 - hand.filter((tile) => tile === draw).length, 0);
+    const handShanten = shanten(hand, question.openMelds.length);
+    const waits = codes.filter((draw) => allTiles.filter((tile) => tile === draw).length < 4 && shanten([...hand, draw], question.openMelds.length) < handShanten);
+    const acceptance = waits.reduce((sum, draw) => sum + 4 - allTiles.filter((tile) => tile === draw).length, 0);
     return { discard, shanten: handShanten, acceptance, waits };
   }).sort((a, b) => a.shanten - b.shanten || b.acceptance - a.acceptance);
   const answerStats = choices.filter((choice) => question.answers.includes(choice.discard));
@@ -97,3 +101,4 @@ questions.forEach((question, index) => {
 });
 
 if (failed) process.exitCode = 1;
+
