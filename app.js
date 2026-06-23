@@ -87,11 +87,15 @@ function shuffle(items) {
 }
 
 function pickQuestions() {
-  const mix = { 初級: 3, 中級: 3, 上級: 4 };
-  const selected = Object.entries(mix).flatMap(([difficulty, count]) =>
-    shuffle(window.QUESTION_BANK.filter((question) => question.difficulty === difficulty)).slice(0, count)
-  );
-  return shuffle(selected);
+  const mix = { "門前・第一打": 2, "門前・中盤": 2, "一副露": 3, "二副露": 3 };
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const selected = Object.entries(mix).flatMap(([scenario, count]) =>
+      shuffle(window.QUESTION_BANK.filter((question) => question.scenario === scenario)).slice(0, count)
+    );
+    const difficultyCounts = selected.reduce((counts, question) => ({ ...counts, [question.difficulty]: (counts[question.difficulty] || 0) + 1 }), {});
+    if (["初級", "中級", "上級"].every((level) => (difficultyCounts[level] || 0) >= 2)) return shuffle(selected);
+  }
+  return shuffle(window.QUESTION_BANK).slice(0, 10);
 }
 
 let questions = pickQuestions();
@@ -99,6 +103,7 @@ let current = 0;
 let answers = Array(questions.length).fill(null);
 
 const handEl = document.querySelector("#hand");
+const openMeldsEl = document.querySelector("#open-melds");
 const answerPanel = document.querySelector("#answer-panel");
 const nextButton = document.querySelector("#next-button");
 const prevButton = document.querySelector("#prev-button");
@@ -134,11 +139,20 @@ function renderQuestion() {
   const q = questions[current];
   const saved = answers[current];
   document.querySelector("#difficulty").textContent = q.difficulty;
+  document.querySelector("#scenario").textContent = q.scenario;
+  document.querySelector(".prompt").textContent = q.prompt;
   document.querySelector("#question-number").textContent = `QUESTION ${String(current + 1).padStart(2, "0")}`;
   document.querySelector("#progress-label").textContent = `${String(current + 1).padStart(2, "0")} / ${questions.length}`;
   document.querySelector("#progress-bar").style.width = `${((current + 1) / questions.length) * 100}%`;
   handEl.innerHTML = "";
   q.hand.forEach((tile, index) => handEl.appendChild(makeTile(tile, index)));
+  openMeldsEl.innerHTML = "";
+  q.openMelds.forEach((meld) => {
+    const group = document.createElement("div");
+    group.className = "meld";
+    meld.forEach((tile) => group.appendChild(makeTile(tile, 0, false)));
+    openMeldsEl.appendChild(group);
+  });
   prevButton.disabled = current === 0;
   answerPanel.hidden = true;
   nextButton.disabled = !saved;
@@ -179,8 +193,32 @@ function showResult() {
   const score = answers.filter((a) => a?.isCorrect).length;
   document.querySelector("#score").textContent = score;
   document.querySelector("#score-message").textContent = score >= 10 ? "好形を残す判断が身についています。" : score >= 7 ? "基本は良好。複合形の変化をもう一度確認しましょう。" : "解説を読み返し、孤立牌と複合形の優先順位を整理しましょう。";
+  renderMistakeReview();
   document.querySelector("#result").hidden = false;
   document.querySelector("#result").scrollIntoView({ behavior: "smooth" });
+}
+
+function renderMistakeReview() {
+  const review = document.querySelector("#mistake-review");
+  review.innerHTML = "";
+  const mistakes = answers.map((answer, index) => ({ answer, question: questions[index], index })).filter(({ answer }) => !answer?.isCorrect);
+  const heading = document.createElement("h3");
+  heading.textContent = mistakes.length ? `間違えた問題 ${mistakes.length}問` : "全問正解";
+  review.appendChild(heading);
+  mistakes.forEach(({ answer, question, index }) => {
+    const card = document.createElement("article");
+    card.className = "review-card";
+    card.innerHTML = `<div class="review-head"><span>QUESTION ${String(index + 1).padStart(2, "0")}</span><span>${question.scenario} · ${question.difficulty}</span></div>`;
+    const tiles = document.createElement("div"); tiles.className = "review-tiles";
+    question.hand.forEach((tile) => tiles.appendChild(makeTile(tile, 0, false)));
+    question.openMelds.flat().forEach((tile) => tiles.appendChild(makeTile(tile, 0, false)));
+    card.appendChild(tiles);
+    const choices = document.createElement("div"); choices.className = "review-choices";
+    choices.innerHTML = `<span>あなたの打牌：${tileLabel(answer.code)}</span><span>模範解答：${question.answers.map(tileLabel).join("・")}</span>`;
+    card.appendChild(choices);
+    const text = document.createElement("p"); text.textContent = question.explanation; card.appendChild(text);
+    review.appendChild(card);
+  });
 }
 
 nextButton.addEventListener("click", () => {
@@ -201,6 +239,7 @@ document.querySelector("#retry-button").addEventListener("click", () => {
   current = 0;
   answers = Array(questions.length).fill(null);
   document.querySelector("#result").hidden = true;
+  document.querySelector("#mistake-review").innerHTML = "";
   renderQuestion();
   document.querySelector("#drill").scrollIntoView({ behavior: "smooth" });
 });
@@ -208,3 +247,4 @@ document.querySelector("#retry-button").addEventListener("click", () => {
 document.querySelector("#question-count").textContent = questions.length;
 document.querySelector("#score-total").textContent = `/ ${questions.length}`;
 renderQuestion();
+
