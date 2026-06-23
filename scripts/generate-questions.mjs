@@ -69,7 +69,9 @@ function evaluate(concealed, melds) {
 }
 
 function makeMelds(count) {
-  const melds = [];
+  if (!count) return [];
+  const yakuhai = ["P", "F", "C"][Math.floor(rng() * 3)];
+  const melds = [[yakuhai, yakuhai, yakuhai]];
   while (melds.length < count) {
     if (rng() < .72) {
       const suit = ["m", "p", "s"][Math.floor(rng() * 3)];
@@ -109,7 +111,7 @@ function explain(best, leaders, runner, open) {
   const discard = leaders.map((x) => label(x.discard)).join("・");
   const waits = best.waits.map(label).join("・");
   const state = best.shanten === 0 ? "聴牌" : `${best.shanten}シャンテン`;
-  const prefix = open ? `副露済みの${open}面子を完成ブロックとして数えると、` : "";
+  const prefix = open ? `三元牌の役牌ポンで和了役を確保しています。副露済みの${open}面子を完成ブロックとして数えると、` : "";
   let text = `${prefix}打${discard}で${state}。受け入れは${waits}の${best.waits.length}種${best.acceptance}枚です。`;
   if (leaders.length > 1) text += "シャンテン数と一次受け入れが同じため、いずれも同価です。";
   else text += `次点の打${label(runner.discard)}は${runner.shanten === 0 ? "聴牌" : `${runner.shanten}シャンテン`}・${runner.acceptance}枚受けなので、打${discard}を優先します。`;
@@ -150,4 +152,3 @@ for (const scenario of scenarios) {
 
 fs.writeFileSync(output, `// Generated deterministically by scripts/generate-questions.mjs\nwindow.QUESTION_BANK = ${JSON.stringify(bank, null, 2)};\n`, "utf8");
 console.log({ questions: bank.length, attempts, honorAnswers, scenarios: Object.fromEntries(scenarios.map((s) => [s.name, bank.filter((q) => q.scenario === s.name).length])) });
-
