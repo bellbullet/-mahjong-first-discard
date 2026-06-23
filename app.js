@@ -86,16 +86,28 @@ function shuffle(items) {
   return pool;
 }
 
+function isValidQuestion(question) {
+  if (!question || !Array.isArray(question.hand) || !Array.isArray(question.openMelds) || !Array.isArray(question.answers)) return false;
+  const allTiles = [...question.hand, ...question.openMelds.flat()];
+  const hasValidCount = allTiles.length === 14 && Object.values(allTiles.reduce((counts, tile) => ({ ...counts, [tile]: (counts[tile] || 0) + 1 }), {})).every((count) => count <= 4);
+  const answersExist = question.answers.length > 0 && question.answers.every((tile) => question.hand.includes(tile));
+  const textIsComplete = !`${question.prompt} ${question.explanation}`.includes("truncated");
+  const openHandHasYaku = !question.openMelds.length || question.openMelds.some((meld) => ["P", "F", "C"].includes(meld[0]) && meld.every((tile) => tile === meld[0]));
+  return hasValidCount && answersExist && textIsComplete && openHandHasYaku;
+}
+
+const questionBank = window.QUESTION_BANK.filter(isValidQuestion);
+
 function pickQuestions() {
   const mix = { "門前・第一打": 2, "門前・中盤": 2, "一副露": 3, "二副露": 3 };
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const selected = Object.entries(mix).flatMap(([scenario, count]) =>
-      shuffle(window.QUESTION_BANK.filter((question) => question.scenario === scenario)).slice(0, count)
+      shuffle(questionBank.filter((question) => question.scenario === scenario)).slice(0, count)
     );
     const difficultyCounts = selected.reduce((counts, question) => ({ ...counts, [question.difficulty]: (counts[question.difficulty] || 0) + 1 }), {});
     if (["初級", "中級", "上級"].every((level) => (difficultyCounts[level] || 0) >= 2)) return shuffle(selected);
   }
-  return shuffle(window.QUESTION_BANK).slice(0, 10);
+  return shuffle(questionBank).slice(0, 10);
 }
 
 let questions = pickQuestions();
@@ -247,4 +259,3 @@ document.querySelector("#retry-button").addEventListener("click", () => {
 document.querySelector("#question-count").textContent = questions.length;
 document.querySelector("#score-total").textContent = `/ ${questions.length}`;
 renderQuestion();
-
