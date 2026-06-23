@@ -74,6 +74,9 @@ questions.forEach((question, index) => {
     ...Object.entries(counts).filter(([, tiles]) => tiles.length > 4).map(([tile]) => `${tile} appears more than four times`),
     ...question.answers.filter((tile) => !question.hand.includes(tile)).map((tile) => `answer ${tile} is not in hand`)
   ].filter(Boolean);
+  if (question.openMelds.length && !question.openMelds.some((meld) => ["P", "F", "C"].includes(meld[0]) && meld.every((tile) => tile === meld[0]))) {
+    structuralErrors.push("open hand has no guaranteed yakuhai");
+  }
 
   const choices = [...new Set(question.hand)].map((discard) => {
     const hand = [...question.hand];
@@ -101,4 +104,3 @@ questions.forEach((question, index) => {
 });
 
 if (failed) process.exitCode = 1;
-
